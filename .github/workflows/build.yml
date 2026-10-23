@@ -1,5 +1,6 @@
 # GitHub 에 올리면 macOS(.app) 와 Windows(.exe) 를 자동으로 빌드한다.
 # Actions 탭 → 실행 결과 → Artifacts 에서 내려받을 수 있다.
+# Windows 는 exe 를 띄워 보고 화면 캡처(Windows-screenshot)도 함께 올린다.
 name: build
 
 on:
@@ -28,3 +29,28 @@ jobs:
           path: |
             dist/mac-app.zip
             dist/*.exe
+      # 빌드된 exe 를 실제로 띄워 창이 뜨는지 확인하고 화면을 캡처한다 (버튼 동작은 확인 못 함)
+      - name: Windows 실행 테스트
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $name = "수학의힘 행정도우미"
+          Start-Process "dist\$name.exe"
+          # 창이 뜰 때까지 최대 60초 (exe 하나짜리는 처음에 압축을 푸느라 느림)
+          for ($i = 0; $i -lt 60 -and -not $win; $i++) {
+            Start-Sleep 1
+            $win = Get-Process | Where-Object MainWindowTitle -eq $name
+          }
+          Start-Sleep 5   # 화면이 다 그려질 때까지
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b   = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          $bmp.Save("$PWD\screenshot.png")
+          Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $win) { Write-Error "앱 창이 뜨지 않았습니다 — screenshot 을 확인하세요"; exit 1 }
+      - uses: actions/upload-artifact@v4
+        if: always() && runner.os == 'Windows'
+        with:
+          name: Windows-screenshot
+          path: screenshot.png
