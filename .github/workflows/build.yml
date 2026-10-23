@@ -1,0 +1,30 @@
+# GitHub 에 올리면 macOS(.app) 와 Windows(.exe) 를 자동으로 빌드한다.
+# Actions 탭 → 실행 결과 → Artifacts 에서 내려받을 수 있다.
+name: build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-build.txt
+      - run: pyinstaller --noconfirm --clean app.spec
+      - name: macOS 앱 압축 (.app 은 폴더라 zip 으로 묶어야 권한이 유지됨)
+        if: runner.os == 'macOS'
+        run: cd dist && ditto -c -k --keepParent "수학의힘 행정도우미.app" mac-app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ runner.os }}
+          path: |
+            dist/mac-app.zip
+            dist/*.exe

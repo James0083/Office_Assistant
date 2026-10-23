@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수학의힘 행정도우미</title>
+<style>
+  :root {
+    --bg: #ffffff; --surface: #f7f8fa; --border: #e5e7eb; --border2: #d1d5db;
+    --blue: #3b82f6; --blue-dk: #2563eb; --blue-lt: #eff6ff; --blue-bd: #bfdbfe;
+    --txt: #111827; --txt-md: #4b5563; --txt-lt: #9ca3af;
+    --green: #10b981; --green-dk: #059669; --red: #ef4444; --red-lt: #fef2f2; --amber: #d97706;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--surface); color: var(--txt);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+  }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }
+
+  /* 상단 탭 */
+  header { background: var(--bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; }
+  .header-in { max-width: 1000px; margin: 0 auto; padding: 0 16px; display: flex; align-items: center; gap: 24px; }
+  nav { display: flex; gap: 4px; overflow-x: auto; }
+  nav button {
+    border: 0; background: none; padding: 14px 12px; cursor: pointer; color: var(--txt-lt);
+    border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  nav button:hover { color: var(--txt-md); }
+  nav button[aria-selected="true"] { color: var(--txt); font-weight: 600; border-bottom-color: var(--blue); }
+  main { max-width: 1000px; margin: 0 auto; padding: 20px 16px 40px; }
+
+  /* 공통 요소 */
+  .card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
+  .field-label { display: block; font-size: 13px; color: var(--txt-md); margin: 0 0 4px; }
+  .hint { color: var(--txt-lt); font-size: 12px; font-weight: normal; }
+  input[type=text], input[type=search], input[type=date], textarea, select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border2); border-radius: 6px;
+    padding: 8px 10px; outline: none;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-lt); }
+  textarea { resize: vertical; min-height: 220px; line-height: 1.6; }
+  .btn {
+    border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-weight: 600;
+    background: var(--blue); color: #fff; white-space: nowrap;
+  }
+  .btn:hover { background: var(--blue-dk); }
+  .btn.green { background: var(--green); }
+  .btn.green:hover { background: var(--green-dk); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  input.invalid, input.invalid:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-lt); }
+  .name-err { color: var(--red); font-size: 12px; margin-top: 4px; }
+  .ghost {
+    border: 0; background: none; cursor: pointer; padding: 6px 8px; border-radius: 6px;
+    color: var(--txt-md); font-size: 14px; white-space: nowrap;
+  }
+  .ghost:hover { background: var(--surface); }
+  .ghost.blue { color: var(--blue); } .ghost.red { color: var(--red); }
+
+  /* 수강료 계산 */
+  .calc { max-width: 440px; margin: 0 auto; }
+  .calc form { padding: 20px; display: grid; gap: 16px; }
+  .money { display: flex; align-items: center; gap: 8px; }
+  .money input { font-size: 22px; padding: 6px 10px; }
+  .money span { color: var(--txt-md); white-space: nowrap; }
+  .calc .btn { padding: 12px; font-size: 16px; }
+  .result { margin-top: 12px; padding: 20px; text-align: center; background: var(--blue-lt); border-color: var(--blue-bd); }
+  .result .cap { color: var(--blue); font-size: 13px; }
+  .result .amount { font-size: 30px; font-weight: 700; color: var(--txt-lt); }
+  .result .amount.on { color: var(--blue); }
+  .result .detail { font-size: 13px; color: var(--txt-lt); min-height: 1.5em; }
+  .result .detail.err { color: var(--red); }
+
+  /* 목록 + 편집 */
+  .split { display: grid; grid-template-columns: 280px 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 720px) { .split { grid-template-columns: 1fr; } }
+  .list-pane { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .seg { display: flex; border: 1px solid var(--border2); border-radius: 6px; overflow: hidden; }
+  .seg button { flex: 1; border: 0; background: var(--bg); padding: 6px 4px; cursor: pointer; font-size: 13px; color: var(--txt-md); }
+  .seg button + button { border-left: 1px solid var(--border2); }
+  .seg button[aria-checked="true"] { background: var(--blue); color: #fff; font-weight: 600; }
+  .items { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow-y: auto; }
+  .items button {
+    display: block; width: 100%; text-align: left; border: 0; background: none; cursor: pointer;
+    padding: 8px 10px; border-radius: 6px;
+  }
+  .items button:hover { background: var(--surface); }
+  .items button.active { background: var(--blue-lt); }
+  .items .t { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .items .active .t { color: var(--blue-dk); }
+  .items .s { display: block; font-size: 12px; color: var(--txt-lt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .items .empty { padding: 12px 10px; color: var(--txt-lt); font-size: 13px; }
+
+  .editor { padding: 16px; display: grid; gap: 14px; min-width: 0; }
+  .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .status { flex: 1; min-width: 0; text-align: right; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status.ok { color: var(--green-dk); } .status.err { color: var(--red); }
+  .status.warn { color: var(--amber); } .status.muted { color: var(--txt-lt); }
+
+  /* 변수 */
+  .vars { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
+  .vars-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .vars-head b { font-size: 13px; color: var(--txt-md); flex: 1; }
+  .vars-head select { width: auto; padding: 4px 8px; font-size: 13px; }
+  .var-list { max-height: 180px; overflow-y: auto; display: grid; gap: 6px; }
+  .var-row { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, 2fr) auto; gap: 6px; align-items: center; }
+  .var-row input { padding: 5px 8px; font-size: 14px; }
+  .var-row .key { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--blue-dk); }
+  .badge { background: var(--blue-lt); color: var(--blue-dk); border-radius: 6px; padding: 5px 8px; font-size: 13px; }
+  .var-empty { color: var(--txt-lt); font-size: 13px; padding: 4px 2px; }
+
+  /* 미리보기 */
+  dialog { border: 0; border-radius: 12px; padding: 20px; width: min(420px, calc(100vw - 32px)); box-shadow: 0 20px 50px rgba(0,0,0,.2); }
+  dialog::backdrop { background: rgba(17,24,39,.35); }
+  dialog h2 { margin: 0 0 12px; font-size: 16px; }
+  .pv-text { white-space: pre-wrap; background: var(--surface); border: 1px solid var(--border2); border-radius: 6px; padding: 14px; max-height: 55vh; overflow-y: auto; }
+  dialog .actions { justify-content: flex-end; margin-top: 14px; }
+  .foot { margin-top: 10px; display: flex; align-items: center; gap: 8px; color: var(--txt-lt); font-size: 13px; }
+  .foot span { flex: 1; min-width: 0; }
+  .fatal { margin: 40px auto; max-width: 520px; padding: 0 16px; white-space: pre-wrap; color: var(--red); }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-in">
+    <nav role="tablist">
+      <button role="tab" data-tab="calc">수강료 계산</button>
+      <button role="tab" data-tab="templates">문자 템플릿</button>
+      <button role="tab" data-tab="notes">메모</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- 수강료 계산 -->
+  <section id="tab-calc" class="calc" hidden>
+    <form class="card" id="calc-form">
+      <div>
+        <label class="field-label" for="tuition">수강료</label>
+        <div class="money">
+          <input type="text" id="tuition" inputmode="numeric" autocomplete="off" placeholder="예: 30">
+          <span>만 원</span>
+        </div>
+      </div>
+      <div>
+        <label class="field-label" for="start">수업 시작일</label>
+        <input type="date" id="start">
+      </div>
+      <button class="btn" type="submit">계산하기</button>
+    </form>
+    <div class="card result">
+      <div class="cap">이번 달 수강료</div>
+      <div class="amount" id="amount">—</div>
+      <div class="detail" id="detail"></div>
+      <button class="ghost blue" id="to-tmpl" hidden>이 금액으로 문자 만들기 →</button>
+    </div>
+  </section>
+
+  <!-- 문자 템플릿 / 메모 (같은 구조) -->
+  <template id="collection-tpl">
+    <div class="split">
+      <aside class="card list-pane">
+        <div class="seg" role="radiogroup" aria-label="검색 범위">
+          <button type="button" role="radio" data-mode="name">제목</button>
+          <button type="button" role="radio" data-mode="content">본문</button>
+          <button type="button" role="radio" data-mode="both">제목+본문</button>
+        </div>
+        <input type="search" class="q" placeholder="🔍 검색">
+        <ul class="items"></ul>
+        <button type="button" class="ghost blue add">+ 새로 만들기</button>
+      </aside>
+      <div class="card editor">
+        <div>
+          <label class="field-label name-label"></label>
+          <input type="text" class="name">
+          <div class="name-err" hidden>같은 이름이 이미 있습니다. 다른 이름을 입력해주세요.</div>
+        </div>
+        <div>
+          <label class="field-label content-label"></label>
+          <textarea class="content"></textarea>
+        </div>
+        <div class="vars">
+          <div class="vars-head">
+            <b>변수</b>
+            <select class="auto" aria-label="자동변수 추가"></select>
+          </div>
+          <div class="var-list"></div>
+          <button type="button" class="ghost blue add-var">+ 변수 추가</button>
+        </div>
+        <div class="actions">
+          <button type="button" class="ghost red del">삭제</button>
+          <span class="status"></span>
+          <button type="button" class="btn green save">저장</button>
+          <button type="button" class="btn preview">미리보기 · 복사</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <section id="tab-templates" hidden></section>
+  <section id="tab-notes" hidden>
+    <div class="foot">
+      <span>데이터는 앱과 같은 폴더의 data.json 에 저장되어 함께 쓰는 사람과 공유됩니다</span>
+      <button type="button" class="ghost" id="open-folder">📂 폴더 열기</button>
+    </div>
+  </section>
+</main>
+
+<dialog id="pv">
+  <h2>미리보기</h2>
+  <div class="pv-text" id="pv-text"></div>
+  <div class="actions">
+    <button type="button" class="ghost" id="pv-close">닫기</button>
+    <button type="button" class="btn" id="pv-copy" autofocus>복사하기</button>
+  </div>
+</dialog>
+
+
+<script>
+const $ = (s, root = document) => root.querySelector(s);
+const el = (tag, props = {}, ...kids) => {
+  const e = Object.assign(document.createElement(tag), props);
+  e.append(...kids);
+  return e;
+};
+const api = () => window.pywebview.api;
+
+let data = { notes: [], templates: [] };
+const calc = { amount: 0, month: 0, year: 0, tuition: 0 };
+
+// ── 자동변수 ─────────────────────────────────────────────────────────────
+const AUTO = {
+  "__auto_month__":   ["월 (자동)",          () => String(calc.month || new Date().getMonth() + 1)],
+  "__auto_year__":    ["년도 (자동)",        () => String(calc.year || new Date().getFullYear())],
+  "__auto_amount__":  ["계산된 수강료 (자동)", () => calc.amount ? calc.amount.toLocaleString() : "(수강료 계산 먼저)"],
+  "__auto_tuition__": ["정상 수강료 (자동)",   () => calc.tuition ? calc.tuition.toLocaleString() : "(수강료 계산 먼저)"],
+};
+const VAR_RE = /\{([\p{L}\p{N}_]+)\}/gu;
+
+// ── 탭 ───────────────────────────────────────────────────────────────────
+const tabs = document.querySelectorAll("nav button");
+let currentTab = "calc";
+function showTab(name) {
+  currentTab = name;
+  tabs.forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
+  document.querySelectorAll("main > section").forEach(s => s.hidden = s.id !== "tab-" + name);
+}
+tabs.forEach(b => b.onclick = () => showTab(b.dataset.tab));
+
+// ── 수강료 계산 ──────────────────────────────────────────────────────────
+const tuitionIn = $("#tuition"), startIn = $("#start");
+const today = new Date();
+startIn.value = [today.getFullYear(), today.getMonth() + 1, today.getDate()]
+  .map(n => String(n).padStart(2, "0")).join("-");
+tuitionIn.addEventListener("input", () => tuitionIn.value = tuitionIn.value.replace(/\D/g, ""));
+
+$("#calc-form").onsubmit = e => {
+  e.preventDefault();
+  const amountEl = $("#amount"), detail = $("#detail");
+  const fail = msg => { detail.textContent = msg; detail.className = "detail err"; };
+  if (!tuitionIn.value) {
+    amountEl.textContent = "—"; amountEl.className = "amount";
+    tuitionIn.focus();
+    return fail("수강료를 입력해주세요");
+  }
+  if (!startIn.value) return fail("시작일을 선택해주세요");
+  const [y, m, d] = startIn.value.split("-").map(Number);
+  const tuition = Number(tuitionIn.value) * 10000;
+  const days = new Date(y, m, 0).getDate() - d + 1;          // 시작일~말일
+  const result = Math.floor(tuition / 30 * days / 10) * 10;  // 일할 계산, 10원 단위 절삭
+  amountEl.textContent = result.toLocaleString() + "원"; amountEl.className = "amount on";
+  detail.textContent = `${tuition.toLocaleString()}원 ÷ 30 × ${days}일 (10원 단위 절삭)`;
+  detail.className = "detail";
+  Object.assign(calc, { amount: result, month: m, year: y, tuition });
+  $("#to-tmpl").hidden = false;
+};
+$("#to-tmpl").onclick = () => showTab("templates");
+
+// ── 목록 + 편집기 (템플릿·메모 공용) ─────────────────────────────────────
+// 항목은 이름으로 구분한다. st.name 이 null 이면 아직 저장 안 된 새 항목.
+function collection(kind, opts) {
+  const sec = $("#tab-" + kind);
+  sec.prepend($("#collection-tpl").content.cloneNode(true));
+  const E = {
+    seg: sec.querySelectorAll(".seg button"), q: $(".q", sec), list: $(".items", sec),
+    name: $(".name", sec), nameErr: $(".name-err", sec), content: $(".content", sec),
+    status: $(".status", sec), save: $(".save", sec), varList: $(".var-list", sec), auto: $(".auto", sec),
+  };
+  $(".name-label", sec).textContent = opts.nameLabel;
+  $(".content-label", sec).innerHTML = opts.contentLabel;
+  // name: 편집 중인 항목 이름 (null = 저장 전 새 항목), base: 편집을 시작할 때의 원본
+  const st = { name: null, base: null, mode: "name", vars: [], flashUntil: 0 };
+  const items = () => data[kind];
+  const find = name => items().find(it => it.name === name);
+
+  // 검색
+  function matches(it) {
+    const q = E.q.value.trim().toLowerCase();
+    if (!q) return true;
+    const n = it.name.toLowerCase(), c = (it.content || "").toLowerCase();
+    return st.mode === "name" ? n.includes(q) : st.mode === "content" ? c.includes(q) : n.includes(q) || c.includes(q);
+  }
+  function setMode(m) {
+    st.mode = m;
+    E.seg.forEach(b => b.setAttribute("aria-checked", b.dataset.mode === m));
+    renderList();
+  }
+  E.seg.forEach(b => b.onclick = () => setMode(b.dataset.mode));
+  E.q.addEventListener("input", renderList);
+  E.q.addEventListener("keydown", e => {   // Enter → 첫 결과 선택
+    if (e.key === "Enter") $(".items button", sec)?.click();
+  });
+
+  function renderList() {
+    const shown = items().filter(matches);
+    E.list.replaceChildren(...shown.map(it => {
+      const b = el("button", { type: "button", className: it.name === st.name ? "active" : "" },
+        el("span", { className: "t", textContent: it.name }),
+        el("span", { className: "s", textContent: (it.content || "").split("\n").find(l => l.trim()) || "" }));
+      b.onclick = () => select(it.name);
+      return el("li", {}, b);
+    }));
+    if (!shown.length) E.list.append(el("li", { className: "empty", textContent: "검색 결과 없음" }));
+  }
+
+  // 편집 상태
+  const shape = it => {
+    const s = { name: it.name, content: it.content || "" };
+    if (opts.vars) s.vars = (it.vars || []).map(v => ({ key: v.key, label: v.label || "", value: v.value || "" }));
+    return s;
+  };
+  const editorState = () => shape({ name: E.name.value, content: E.content.value, vars: st.vars });
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const dirty = () => !!st.base && !same(editorState(), st.base);
+  // 입력한 이름이 다른 항목과 겹치는지
+  const nameTaken = () => { const n = E.name.value.trim(); return n !== st.name && !!find(n); };
+  const confirmLeave = () => !dirty() || confirm("저장하지 않은 변경사항이 있습니다. 버리고 이동할까요?");
+
+  function fill(it, name) {
+    st.name = name;
+    const s = st.base = shape(it);
+    E.name.value = s.name; E.content.value = s.content;
+    if (opts.vars) { st.vars = s.vars; renderVars(); }
+    renderList(); refresh();
+  }
+  const load = name => fill(find(name), name);
+  function select(name) { if (name !== st.name && confirmLeave()) load(name); }
+
+  // 상태 표시 — 고정 영역 안에서만 바뀌어 버튼이 밀리지 않음
+  function flash(msg, cls = "ok") {
+    E.status.textContent = msg; E.status.className = "status " + cls; E.status.title = msg;
+    st.flashUntil = Date.now() + 2500;
+    setTimeout(refresh, 2600);
+  }
+  function refresh() {
+    const taken = nameTaken();
+    E.name.classList.toggle("invalid", taken);
+    E.nameErr.hidden = !taken;
+    E.save.disabled = taken || !E.name.value.trim();
+    reportDirty();
+    if (Date.now() < st.flashUntil) return;
+    E.status.textContent = st.name === null ? "새 항목 — 저장하면 목록에 추가됩니다"
+                         : dirty() ? "저장되지 않은 변경사항" : "";
+    E.status.className = "status muted";
+  }
+  E.name.addEventListener("input", refresh);
+  E.content.addEventListener("input", refresh);
+
+  // 변수 (템플릿 전용)
+  function renderVars() {
+    E.varList.replaceChildren(...st.vars.map((v, i) => {
+      const key = el("input", { type: "text", className: "key", value: v.key, placeholder: "변수명" });
+      key.oninput = () => { v.key = key.value; refresh(); };
+      let val;
+      if (AUTO[v.value]) val = el("span", { className: "badge", textContent: AUTO[v.value][0] });
+      else {
+        val = el("input", { type: "text", value: v.value, placeholder: "값" });
+        val.oninput = () => { v.value = val.value; refresh(); };
+      }
+      const rm = el("button", { type: "button", className: "ghost", textContent: "×", title: "삭제" });
+      rm.onclick = () => { st.vars.splice(i, 1); renderVars(); refresh(); };
+      return el("div", { className: "var-row" }, key, val, rm);
+    }));
+    if (!st.vars.length) E.varList.append(el("div", { className: "var-empty", textContent: "변수가 없습니다" }));
+  }
+  function addVar(v) {
+    st.vars.push(v); renderVars(); refresh();
+    E.varList.scrollTop = E.varList.scrollHeight;
+    const key = E.varList.lastElementChild.querySelector(".key");
+    key.focus(); key.select();
+  }
+  if (opts.vars) {
+    E.auto.append(el("option", { value: "", textContent: "+ 자동변수 추가" }),
+      ...Object.entries(AUTO).map(([k, [label]]) => el("option", { value: k, textContent: label })));
+    E.auto.onchange = () => {
+      const ak = E.auto.value; E.auto.value = "";
+      if (!ak || st.vars.some(v => v.value === ak)) return;
+      addVar({ key: ak.slice("__auto_".length, -2), label: AUTO[ak][0], value: ak });
+    };
+    $(".add-var", sec).onclick = () => addVar({ key: "변수명", label: "", value: "" });
+  } else {
+    $(".vars", sec).remove();
+    $(".preview", sec).remove();
+  }
+
+  // 다른 사용자의 변경을 반영 — 편집 중인 내용은 건드리지 않는다
+  function sync() {
+    renderList();
+    if (st.name !== null && !dirty()) {
+      const it = find(st.name);
+      if (!it) load(items()[0].name);                    // 다른 사용자가 삭제함
+      else if (!same(shape(it), st.base)) fill(it, st.name);
+    }
+    refresh();
+  }
+
+  // 동작 — 파이썬이 디스크의 최신 데이터에 이 항목만 반영하고 전체를 돌려준다
+  async function handle(res) {
+    if (res.ok) { setData(res.data); return true; }
+    if (res.conflict) {
+      await reloadData();
+      if (confirm(res.error + "\n최신 내용을 불러올까요?\n(취소하면 지금 입력한 내용이 화면에 그대로 남습니다)"))
+        find(st.name) ? load(st.name) : load(items()[0].name);
+      else flash("저장 안 됨: " + res.error, "err");
+    } else flash("저장 실패: " + res.error, "err");
+    return false;
+  }
+  async function save() {
+    const s = editorState();
+    s.name = s.name.trim();
+    if (!s.name) return flash(opts.nameLabel + "을(를) 입력해주세요", "err");
+    if (nameTaken()) return flash(`'${s.name}' 이름이 이미 있습니다`, "err");
+    if (opts.vars) s.vars = s.vars.filter(v => v.key.trim()).map(v => ({ ...v, key: v.key.trim() }));
+    const isNew = st.name === null;
+    if (await handle(await api().save_item(kind, st.base && !isNew ? st.base : null, s))) {
+      load(s.name); flash(isNew ? "✓ 추가됨" : "✓ 저장됨");
+    }
+  }
+  async function del() {
+    if (st.name === null) {   // 새 항목 작성 취소
+      if (confirmLeave()) load(items()[0].name);
+      return;
+    }
+    if (items().length <= 1) return flash("최소 1개는 있어야 합니다", "err");
+    if (!confirm(`'${st.name}' 을(를) 삭제할까요?`)) return;
+    const i = items().findIndex(it => it.name === st.name);
+    if (await handle(await api().delete_item(kind, st.name))) {
+      load(items()[Math.min(i, items().length - 1)].name); flash("삭제됨");
+    }
+  }
+  function add() {
+    if (!confirmLeave()) return;
+    fill(opts.blank(), null);
+    E.name.focus(); E.name.select();
+  }
+  function preview() {
+    const kw = {};
+    for (const v of st.vars) {
+      const k = v.key.trim();
+      if (k) kw[k] = AUTO[v.value] ? AUTO[v.value][1]() : v.value;
+    }
+    const content = E.content.value;
+    const missing = [...new Set([...content.matchAll(VAR_RE)].map(m => m[1]))].filter(k => !(k in kw));
+    if (missing.length) return flash("미정의 변수: " + missing.map(m => `{${m}}`).join(", "), "warn");
+    openPreview(content.replace(VAR_RE, (_, k) => kw[k]));
+  }
+  E.save.onclick = save;
+  $(".del", sec).onclick = del;
+  $(".add", sec).onclick = add;
+  if (opts.vars) $(".preview", sec).onclick = preview;
+
+  setMode("name");
+  return { start: () => load(items()[0].name), save, dirty, sync };
+}
+
+// ── 미리보기 ─────────────────────────────────────────────────────────────
+const pv = $("#pv"), pvCopy = $("#pv-copy");
+let pvText = "";
+function openPreview(text) {
+  pvText = text;
+  $("#pv-text").textContent = text;
+  pvCopy.textContent = "복사하기";
+  pv.showModal();
+}
+$("#pv-close").onclick = () => pv.close();
+pvCopy.onclick = async () => {
+  pvCopy.textContent = await api().copy(pvText) ? "✓ 복사됨" : "복사 실패";
+  setTimeout(() => pvCopy.textContent = "복사하기", 1500);
+};
+
+// ── 시작 ─────────────────────────────────────────────────────────────────
+let colls = {}, lastDirty = false;
+// 저장 안 한 내용이 있으면 창을 닫을 때 확인창을 띄우도록 파이썬에 알림
+function reportDirty() {
+  const d = Object.values(colls).some(c => c.dirty());
+  if (d !== lastDirty) { lastDirty = d; api().set_dirty(d); }
+}
+
+$("#open-folder").onclick = () => api().open_folder();
+
+function setData(d) {
+  data = d;
+  Object.values(colls).forEach(c => c.sync());
+}
+// 공유 폴더의 다른 사용자 변경을 가져옴: 창으로 돌아올 때 + 주기적으로
+async function reloadData() {
+  const res = await api().load();
+  if (res.ok) setData(res.data);
+}
+window.addEventListener("focus", reloadData);
+setInterval(reloadData, 15000);
+
+// Ctrl/⌘+S → 현재 탭 저장
+document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+    e.preventDefault();
+    colls[currentTab]?.save();
+  }
+});
+
+window.addEventListener("pywebviewready", async () => {
+  const res = await api().load();
+  if (!res.ok) {
+    document.body.replaceChildren(el("p", { className: "fatal", textContent: res.error }));
+    return;
+  }
+  data = res.data;
+  colls = {
+    templates: collection("templates", {
+      nameLabel: "템플릿 이름", vars: true,
+      contentLabel: '내용 <span class="hint">{변수명} 으로 빈칸 삽입</span>',
+      blank: () => ({ name: "새 템플릿", content: "", vars: [] }),
+    }),
+    notes: collection("notes", {
+      nameLabel: "제목", contentLabel: "본문",
+      blank: () => ({ name: "새 메모", content: "" }),
+    }),
+  };
+  Object.values(colls).forEach(c => c.start());
+  showTab("calc");
+});
+</script>
+</body>
+</html>

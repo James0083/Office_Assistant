@@ -1,0 +1,9 @@
+.venv/
+build/
+dist/
+__pycache__/
+
+# 실행 중 생기는 데이터·잠금 파일
+data.json
+data.json.lock
+*.tmp
