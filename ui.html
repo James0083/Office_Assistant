@@ -217,6 +217,17 @@
   </div>
 </dialog>
 
+<dialog id="conflict">
+  <h2>저장 충돌</h2>
+  <p id="conflict-text"></p>
+  <p class="hint">불러오면 지금 입력한 내용이 사라지고, 덮어쓰면 다른 사용자의 변경이 사라집니다.</p>
+  <form method="dialog" class="actions">
+    <button class="ghost" value="">취소</button>
+    <button class="btn green" value="overwrite">내 내용으로 덮어쓰기</button>
+    <button class="btn" value="load" autofocus>최신 내용 불러오기</button>
+  </form>
+</dialog>
+
 
 <script>
 const $ = (s, root = document) => root.querySelector(s);
@@ -418,14 +429,9 @@ function collection(kind, opts) {
   }
 
   // 동작 — 파이썬이 디스크의 최신 데이터에 이 항목만 반영하고 전체를 돌려준다
-  async function handle(res) {
+  function handle(res) {
     if (res.ok) { setData(res.data); return true; }
-    if (res.conflict) {
-      await reloadData();
-      if (confirm(res.error + "\n최신 내용을 불러올까요?\n(취소하면 지금 입력한 내용이 화면에 그대로 남습니다)"))
-        find(st.name) ? load(st.name) : load(items()[0].name);
-      else flash("저장 안 됨: " + res.error, "err");
-    } else flash("저장 실패: " + res.error, "err");
+    flash("저장 실패: " + res.error, "err");
     return false;
   }
   async function save() {
@@ -435,7 +441,20 @@ function collection(kind, opts) {
     if (nameTaken()) return flash(`'${s.name}' 이름이 이미 있습니다`, "err");
     if (opts.vars) s.vars = s.vars.filter(v => v.key.trim()).map(v => ({ ...v, key: v.key.trim() }));
     const isNew = st.name === null;
-    if (await handle(await api().save_item(kind, st.base && !isNew ? st.base : null, s))) {
+    let res = await api().save_item(kind, isNew ? null : st.base, s);
+    while (res.conflict) {   // 다른 사용자가 먼저 바꾼 경우 — 어떻게 할지 묻는다
+      const choice = await askConflict(res.error);
+      await reloadData();
+      const latest = find(st.name);
+      if (choice === "overwrite")   // 디스크의 최신 내용을 원본 삼아 다시 저장 (삭제됐으면 새로 추가)
+        res = await api().save_item(kind, latest ? shape(latest) : null, s);
+      else {
+        if (choice === "load") load(latest ? st.name : items()[0].name);
+        else flash("저장 안 됨: " + res.error, "err");
+        return;
+      }
+    }
+    if (handle(res)) {
       load(s.name); flash(isNew ? "✓ 추가됨" : "✓ 저장됨");
     }
   }
@@ -447,7 +466,7 @@ function collection(kind, opts) {
     if (items().length <= 1) return flash("최소 1개는 있어야 합니다", "err");
     if (!confirm(`'${st.name}' 을(를) 삭제할까요?`)) return;
     const i = items().findIndex(it => it.name === st.name);
-    if (await handle(await api().delete_item(kind, st.name))) {
+    if (handle(await api().delete_item(kind, st.name))) {
       load(items()[Math.min(i, items().length - 1)].name); flash("삭제됨");
     }
   }
@@ -490,6 +509,16 @@ pvCopy.onclick = async () => {
   pvCopy.textContent = await api().copy(pvText) ? "✓ 복사됨" : "복사 실패";
   setTimeout(() => pvCopy.textContent = "복사하기", 1500);
 };
+
+// ── 저장 충돌 ───────────────────────────────────────────────────────────
+// 고른 버튼의 value 를 돌려준다: "load" | "overwrite" | "" (취소·Esc)
+function askConflict(msg) {
+  const dlg = $("#conflict");
+  $("#conflict-text").textContent = msg;
+  dlg.returnValue = "";
+  dlg.showModal();
+  return new Promise(resolve => dlg.addEventListener("close", () => resolve(dlg.returnValue), { once: true }));
+}
 
 // ── 시작 ─────────────────────────────────────────────────────────────────
 let colls = {}, lastDirty = false;

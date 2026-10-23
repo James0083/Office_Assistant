@@ -10,7 +10,7 @@
   - 같은 항목을 다른 사람이 먼저 바꿨으면 저장을 멈추고 알리며
   - 동시에 저장하지 않도록 잠금 파일(data.json.lock)을 쓴다.
 """
-import json, os, sys, time, subprocess
+import copy, json, os, sys, time, subprocess
 from contextlib import contextmanager
 import webview
 
@@ -20,8 +20,8 @@ KINDS    = ("notes", "templates")
 DEFAULT_DATA = {
     "notes": [{"name": "기본 정보", "content": "학원명: \n계좌번호: \n예금주: \n전화번호: "}],
     "templates": [{
-        "name": "기본 수강료 안내",
-        "content": "안녕하세요 😊\n{month}월 수강료 안내드립니다.\n\n▶ 수강료: {amount}원\n▶ 납부 기한: {month}월 10일까지\n\n감사합니다 🙏",
+        "name": "기본 수강료 안내(예시)",
+        "content": "안녕하세요.\n{month}월 수강료 안내드립니다.\n\n▶ 수강료: {amount}원\n▶ 납부 기한: {month}월 10일까지\n\n감사합니다.",
         "vars": [
             {"key": "month",  "label": "월",         "value": "__auto_month__"},
             {"key": "amount", "label": "계산된 수강료", "value": "__auto_amount__"},
@@ -81,7 +81,7 @@ def load_data():
         with open(data_path(), "r", encoding="utf-8") as f:
             data = json.load(f)
     except FileNotFoundError:
-        return json.loads(json.dumps(DEFAULT_DATA))
+        return copy.deepcopy(DEFAULT_DATA)
     except ValueError:
         # 망가진 파일을 기본값으로 덮어쓰면 모두의 데이터가 사라지므로 멈춘다
         raise UserError(f"data.json 을 읽을 수 없습니다 (파일이 손상됨).\n{data_path()}")
@@ -90,8 +90,9 @@ def load_data():
             {"name": item.get("name", "정보"),
              "content": "\n".join(f"{k}: {v}" for k, v in item.items() if k != "name" and v)}
             for item in data.pop("info_list")]
-    data.setdefault("notes", DEFAULT_DATA["notes"])
-    data.setdefault("templates", DEFAULT_DATA["templates"])
+    # 복사본을 넣어야 저장할 때 DEFAULT_DATA 자체가 바뀌지 않는다
+    for kind in KINDS:
+        data.setdefault(kind, copy.deepcopy(DEFAULT_DATA[kind]))
     for t in data["templates"]:
         t.setdefault("vars", [])
     for kind in KINDS:
