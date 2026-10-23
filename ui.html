@@ -342,7 +342,8 @@ function collection(kind, opts) {
     st.name = name;
     const s = st.base = shape(it);
     E.name.value = s.name; E.content.value = s.content;
-    if (opts.vars) { st.vars = s.vars; renderVars(); }
+    // 복사본으로 편집해야 원본(base)이 같이 바뀌지 않는다
+    if (opts.vars) { st.vars = s.vars.map(v => ({ ...v })); renderVars(); }
     renderList(); refresh();
   }
   const load = name => fill(find(name), name);
