@@ -9,10 +9,15 @@
   - 저장은 항목 하나 단위로, 디스크의 최신 파일에 반영하고 (다른 사람 변경을 덮어쓰지 않음)
   - 같은 항목을 다른 사람이 먼저 바꿨으면 저장을 멈추고 알리며
   - 동시에 저장하지 않도록 잠금 파일(data.json.lock)을 쓴다.
+
+Copyright (c) 2026 유재원 (GitHub: James0083). All rights reserved.
 """
 import copy, json, os, sys, time, subprocess
 from contextlib import contextmanager
 import webview
+
+__author__    = "유재원 (GitHub: James0083)"
+__copyright__ = "Copyright (c) 2026 유재원 (GitHub: James0083). All rights reserved."
 
 APP_NAME = "수학의힘 행정도우미"
 KINDS    = ("notes", "templates")

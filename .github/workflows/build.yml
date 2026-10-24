@@ -35,6 +35,10 @@ jobs:
         shell: pwsh
         run: |
           $name = "수학의힘 행정도우미"
+          # 파일 속성에 저작권 정보가 들어갔는지 확인
+          $copyright = (Get-Item "dist\$name.exe").VersionInfo.LegalCopyright
+          Write-Output "LegalCopyright: $copyright"
+          if ($copyright -notmatch "유재원") { Write-Error "exe 에 저작권 정보가 없습니다"; exit 1 }
           Start-Process "dist\$name.exe"
           # 창이 뜰 때까지 최대 60초 (exe 하나짜리는 처음에 압축을 푸느라 느림)
           for ($i = 0; $i -lt 60 -and -not $win; $i++) {
