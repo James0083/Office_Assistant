@@ -74,16 +74,14 @@ class BrokenFile(DataDirTest):
         with open(self.path, encoding="utf-8") as f:
             self.assertEqual(f.read(), "[1,")
 
-    # 버그: Windows 메모장 등으로 열었다 저장하면 UTF-8 BOM 이 붙는데, 이를 '손상'으로 처리함
+    # 고친 버그: Windows 메모장 등으로 열었다 저장하면 UTF-8 BOM 이 붙는데, 이를 '손상'으로 처리함
     #       (app.py:86 encoding="utf-8" → "utf-8-sig" 로 읽으면 해결)
-    @unittest.expectedFailure
     def test_BOM_이_붙은_파일도_읽음(self):
         self.write(raw="﻿" + json.dumps({"notes": [NOTE_A]}))
         self.assertTrue(app.Api().load()["ok"])
 
-    # 버그: JSON 은 맞지만 모양이 다르면(최상위가 목록, 이름 없는 항목, null) 예외가 api_call 을 빠져나가
+    # 고친 버그: JSON 은 맞지만 모양이 다르면(최상위가 목록, 이름 없는 항목, null) 예외가 api_call 을 빠져나가
     #       화면에는 아무 안내 없이 빈 창만 남음 (app.py:93-104, api_call 은 UserError/OSError 만 잡음)
-    @unittest.expectedFailure
     def test_모양이_다른_JSON_은_오류로_알림(self):
         for raw in ("[]", "null", '{"notes": null}', '{"notes": [{"content": "x"}]}'):
             with self.subTest(raw=raw):
@@ -91,17 +89,15 @@ class BrokenFile(DataDirTest):
                 res = app.Api().load()   # 지금은 AttributeError/TypeError/KeyError 가 그대로 올라옴
                 self.assertFalse(res["ok"])
 
-    # 버그: notes/templates 가 빈 목록이면 그대로 돌려줘서 화면이 시작하다 멈춤 (ui.html:498 items()[0])
+    # 고친 버그: notes/templates 가 빈 목록이면 그대로 돌려줘서 화면이 시작하다 멈춤 (ui.html:498 items()[0])
     #       (app.py:99-100 setdefault 는 키가 없을 때만 채움)
-    @unittest.expectedFailure
     def test_빈_목록이면_기본_항목을_채움(self):
         self.write({"notes": [], "templates": []})
         d = app.Api().load()["data"]
         self.assertTrue(d["notes"] and d["templates"])
 
-    # 버그: 손으로 고친 파일에 "content": null 이 있으면 normalize 가 "None" 으로 바꿔
+    # 고친 버그: 손으로 고친 파일에 "content": null 이 있으면 normalize 가 "None" 으로 바꿔
     #       화면이 보낸 원본("")과 영원히 달라 → 매번 충돌, 덮어쓰기도 다시 충돌 (app.py:146, 148-149)
-    @unittest.expectedFailure
     def test_null_값이_있어도_저장됨(self):
         self.write({"notes": [{"name": "A", "content": None}]})
         base = {"name": "A", "content": ""}   # 화면의 shape() 는 null → ""

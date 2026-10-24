@@ -163,8 +163,7 @@ class Calc(UITest):
         u.click("#to-tmpl")
         self.assertTrue(u.is_visible(T + " .name"))
 
-    # 버그: 소수점이 조용히 지워져 32.5(만 원)가 325(만 원)로 계산됨 → 10배 금액 (ui.html:271)
-    @unittest.expectedFailure
+    # 고친 버그: 소수점이 조용히 지워져 32.5(만 원)가 325(만 원)로 계산됨 → 10배 금액 (ui.html:271)
     def test_소수점_수강료(self):
         u = self.user()
         amount = self.calc(u, "32.5", "2026-10-01")
@@ -182,8 +181,12 @@ class Templates(UITest):
         u = self.user()
         self.tab(u, "templates")
         month = u.evaluate("new Date().getMonth() + 1")
+        # 계산 전에는 금액 변수가 있으면 미리보기가 막히므로, 월 변수만 쓴 내용으로 확인
+        original = u.input_value(T + " .content")
+        u.fill(T + " .content", "{month}월 수강료 안내")
         self.assertIn(f"{month}월 수강료 안내", self.preview_text(u))
         u.click("#pv-close")
+        u.fill(T + " .content", original)
         self.tab(u, "calc")
         u.type("#tuition", "30")
         u.fill("#start", "2027-02-15")
@@ -239,8 +242,7 @@ class Templates(UITest):
         u.select_option(T + " .auto", "__auto_year__")
         self.assertEqual(u.locator(T + " .var-row").count(), 3)
 
-    # 버그: 수강료 계산 전이면 "(수강료 계산 먼저)원" 이 그대로 문자에 들어가 복사까지 됨 (ui.html:251, 481-490)
-    @unittest.expectedFailure
+    # 고친 버그: 수강료 계산 전이면 "(수강료 계산 먼저)원" 이 그대로 문자에 들어가 복사까지 됨 (ui.html:251, 481-490)
     def test_계산_전_금액_변수는_경고(self):
         u = self.user()
         self.tab(u, "templates")
@@ -248,9 +250,8 @@ class Templates(UITest):
         u.wait_for_timeout(100)
         self.assertFalse(u.evaluate("document.querySelector('#pv').open"))
 
-    # 버그: {constructor} {toString} 처럼 Object 기본 속성 이름은 정의 안 해도 통과하고
+    # 고친 버그: {constructor} {toString} 처럼 Object 기본 속성 이름은 정의 안 해도 통과하고
     #       "function Object() { [native code] }" 로 바뀜 (ui.html:482 kw = {} → Object.create(null) 또는 Map)
-    @unittest.expectedFailure
     def test_객체_속성_이름_변수도_미정의로_경고(self):
         u = self.user()
         self.tab(u, "templates")
@@ -338,8 +339,7 @@ class Notes(UITest):
         self.assertEqual(self.state(u)[1], "B")
         self.assertFalse(u.evaluate("__dirty"))
 
-    # 버그: 메모(또는 템플릿)가 빈 목록인 data.json 이면 시작하다 TypeError 로 멈추고 빈 화면 (ui.html:498)
-    @unittest.expectedFailure
+    # 고친 버그: 메모(또는 템플릿)가 빈 목록인 data.json 이면 시작하다 TypeError 로 멈추고 빈 화면 (ui.html:498)
     def test_빈_목록_파일로_시작(self):
         self.write({"notes": [], "templates": app.DEFAULT_DATA["templates"]})
         u = self.user()
@@ -353,8 +353,7 @@ class Startup(UITest):
         u = self.user()
         self.assertIn("data.json 을 읽을 수 없습니다", u.inner_text("body"))
 
-    # 버그: JSON 모양이 다르면 파이썬 예외가 그대로 JS 로 넘어가 아무 안내 없는 빈 화면 (app.py:93-104, 156-165)
-    @unittest.expectedFailure
+    # 고친 버그: JSON 모양이 다르면 파이썬 예외가 그대로 JS 로 넘어가 아무 안내 없는 빈 화면 (app.py:93-104, 156-165)
     def test_모양이_다른_파일이면_안내문(self):
         self.write(raw="[]")
         u = self.user()
@@ -425,9 +424,8 @@ class TwoUsers(UITest):
         self.assertEqual(self.state(self.u2)[1], "A")
         self.assertEqual(self.errors(self.u2), [])
 
-    # 버그: 고치는 중인 항목을 남이 지운 뒤(다시 불러오기 후) 내가 '삭제'를 누르면
+    # 고친 버그: 고치는 중인 항목을 남이 지운 뒤(다시 불러오기 후) 내가 '삭제'를 누르면
     #       findIndex 가 -1 → items()[-1] 에서 TypeError, 화면은 지운 항목에 멈춤 (ui.html:471-473)
-    @unittest.expectedFailure
     def test_남이_지운_항목을_내가_삭제(self):
         self.u2.fill(N + " .content", "고치는 중")
         self.u1.click(N + " .del")
@@ -447,9 +445,8 @@ class SlowShare(UITest):
         self.u = self.user()
         self.tab(self.u, "notes")
 
-    # 버그: 저장 중 버튼·단축키를 막지 않아, 저장을 두 번 누르면 두 번째 요청이 옛 base 로 가서
+    # 고친 버그: 저장 중 버튼·단축키를 막지 않아, 저장을 두 번 누르면 두 번째 요청이 옛 base 로 가서
     #       '다른 사용자가 먼저 수정' 충돌창이 내 저장 때문에 뜸 (ui.html:440-447, 548-554)
-    @unittest.expectedFailure
     def test_저장_두_번_눌러도_충돌_안_남(self):
         self.u.evaluate("__delay.save_item = 200")
         self.u.fill(N + " .content", "x")
@@ -458,9 +455,8 @@ class SlowShare(UITest):
         self.u.wait_for_timeout(900)
         self.assertFalse(self.conflict_open(self.u))
 
-    # 버그: 위와 같은 원인 — 충돌창이 떠 있을 때 ⌘/Ctrl+S 를 누르면 저장이 하나 더 돌아,
+    # 고친 버그: 위와 같은 원인 — 충돌창이 떠 있을 때 ⌘/Ctrl+S 를 누르면 저장이 하나 더 돌아,
     #       덮어쓰기를 골라도 내 덮어쓰기 때문에 충돌창이 다시 뜸
-    @unittest.expectedFailure
     def test_충돌창에서_단축키_눌러도_한_번만(self):
         other = self.user()
         self.tab(other, "notes")
@@ -476,9 +472,8 @@ class SlowShare(UITest):
         self.u.wait_for_timeout(300)
         self.assertFalse(self.conflict_open(self.u))
 
-    # 버그: 저장 전에 시작된 다시 불러오기(15초 주기·창 포커스) 응답이 저장 뒤에 도착하면
+    # 고친 버그: 저장 전에 시작된 다시 불러오기(15초 주기·창 포커스) 응답이 저장 뒤에 도착하면
     #       편집기가 옛 내용으로 되돌아가고, 이어서 고쳐 저장하면 내 저장과 충돌 (ui.html:424-432, 541-544)
-    @unittest.expectedFailure
     def test_늦게_온_다시_불러오기가_저장을_되돌리지_않음(self):
         self.u.evaluate("__delayAfter.load = 800; reloadData(); 0")   # 기다리지 않음
         self.u.wait_for_timeout(150)

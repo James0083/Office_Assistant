@@ -24,7 +24,8 @@ UI 테스트는 `window.pywebview.api` 를 흉내 내는 스크립트를 넣고,
 두 사람 상황은 브라우저 창 두 개가 같은 임시 폴더를 쓰는 식으로 만든다. `confirm()` 은 가짜로 바꿔 답을 정해 둔다.
 창 닫기 확인(pywebview 의 `confirm_close`)과 OS 클립보드 복사는 실제로 확인하지 못한다.
 
-## 알려진 버그
+## 버그를 찾았을 때
 
-`@unittest.expectedFailure` 가 붙은 테스트는 지금 코드에 있는 버그를 나타낸다 (주석에 원인·위치).
-결과에 `expected failures=N` 으로 나오고, 고치면 `unexpected success` 로 바뀌니 그때 데코레이터를 지운다.
+고치기 전에 재현 테스트를 먼저 쓰고 `@unittest.expectedFailure` 를 붙여 두면, 결과에 `expected failures=N` 으로 남는다.
+고치면 `unexpected success` 로 바뀌니 그때 데코레이터를 지우고 주석을 `# 고친 버그:` 로 바꾼다.
+`# 고친 버그:` 주석이 붙은 테스트는 예전에 있던 버그가 다시 생기지 않는지 지키는 테스트다.

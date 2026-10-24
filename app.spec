@@ -7,7 +7,7 @@
 import sys
 
 NAME      = "수학의힘 행정도우미"
-VERSION   = "1.0.0"
+VERSION   = "1.0.1"
 AUTHOR    = "유재원 (GitHub: James0083)"
 COPYRIGHT = "Copyright (c) 2026 유재원 (GitHub: James0083). All rights reserved."
 

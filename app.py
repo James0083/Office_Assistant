@@ -81,25 +81,48 @@ def unique_names(items):
         it["name"] = name
         seen.add(name)
 
+def check_shape(data):
+    """손으로 고친 파일 등 JSON 은 맞지만 모양이 다르면, 화면이 멈추기 전에 알린다"""
+    def bad(why):
+        raise UserError(f"data.json 형식이 올바르지 않습니다 ({why}).\n{data_path()}")
+    if not isinstance(data, dict):
+        bad("최상위가 객체가 아님")
+    for kind in KINDS + ("info_list",):
+        if kind not in data:
+            continue
+        if not isinstance(data[kind], list):
+            bad(f"{kind} 가 목록이 아님")
+        for it in data[kind]:
+            if not isinstance(it, dict):
+                bad(f"{kind} 에 객체가 아닌 항목")
+            if kind != "info_list" and not isinstance(it.get("name"), str):
+                bad(f"{kind} 에 이름이 없는 항목")
+            if kind == "templates" and not all(isinstance(v, dict) for v in it.get("vars") or []):
+                bad("템플릿 변수 형식")
+
 def load_data():
     try:
-        with open(data_path(), "r", encoding="utf-8") as f:
+        # utf-8-sig: Windows 메모장으로 저장하면 붙는 BOM 도 읽는다
+        with open(data_path(), "r", encoding="utf-8-sig") as f:
             data = json.load(f)
     except FileNotFoundError:
         return copy.deepcopy(DEFAULT_DATA)
     except ValueError:
         # 망가진 파일을 기본값으로 덮어쓰면 모두의 데이터가 사라지므로 멈춘다
         raise UserError(f"data.json 을 읽을 수 없습니다 (파일이 손상됨).\n{data_path()}")
+    check_shape(data)
     if "info_list" in data and "notes" not in data:   # 아주 예전 형식 변환
         data["notes"] = [
             {"name": item.get("name", "정보"),
              "content": "\n".join(f"{k}: {v}" for k, v in item.items() if k != "name" and v)}
             for item in data.pop("info_list")]
+    # 없거나 비어 있으면 기본 항목으로 (화면은 항목이 최소 1개라고 가정함)
     # 복사본을 넣어야 저장할 때 DEFAULT_DATA 자체가 바뀌지 않는다
     for kind in KINDS:
-        data.setdefault(kind, copy.deepcopy(DEFAULT_DATA[kind]))
+        if not data.get(kind):
+            data[kind] = copy.deepcopy(DEFAULT_DATA[kind])
     for t in data["templates"]:
-        t.setdefault("vars", [])
+        t["vars"] = t.get("vars") or []
     for kind in KINDS:
         unique_names(data[kind])
     return data
@@ -142,11 +165,12 @@ def data_lock(timeout=5, stale=30):
             pass
 
 def normalize(kind, item):
-    """비교·저장용으로 항목 모양을 맞춘다 (화면의 shape() 와 같은 규칙)"""
-    it = {"name": str(item.get("name", "")).strip(), "content": str(item.get("content", ""))}
+    """비교·저장용으로 항목 모양을 맞춘다 (화면의 shape() 와 같은 규칙: 없거나 null 이면 "")"""
+    s = lambda d, k: str(d.get(k) or "")
+    it = {"name": s(item, "name").strip(), "content": s(item, "content")}
     if kind == "templates":
-        it["vars"] = [{"key": str(v.get("key", "")), "label": str(v.get("label", "")),
-                       "value": str(v.get("value", ""))} for v in item.get("vars", [])]
+        it["vars"] = [{"key": s(v, "key"), "label": s(v, "label"), "value": s(v, "value")}
+                      for v in item.get("vars") or []]
     return it
 
 def find_index(items, name):
@@ -162,6 +186,8 @@ def api_call(fn):
             return {"ok": False, "error": str(e), "conflict": isinstance(e, Conflict)}
         except OSError as e:
             return {"ok": False, "error": f"파일 오류: {e}"}
+        except Exception as e:   # 예상 못 한 오류도 화면에 알린다 (그냥 올라가면 빈 화면이 됨)
+            return {"ok": False, "error": f"예상하지 못한 오류: {type(e).__name__}: {e}"}
     return wrapper
 
 class Api:
