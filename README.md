@@ -15,6 +15,9 @@
 | `실행.command` | 개발용: 빌드 없이 소스에서 바로 실행 (macOS) |
 | `build_mac.command` / `build_windows.bat` | 각 OS 에서 앱 빌드 |
 | `.github/workflows/build.yml` | GitHub 에 올리면 두 OS 용 앱을 자동 빌드 + Windows exe 실행 테스트 |
+| `CHANGELOG.md` | 버전별 변경 기록 |
+| `docs/VERSIONING.md` | 버전 번호 규칙과 배포 순서 |
+| `docs/plan-manual-tab.md` / `docs/plan-admin.md` | 기획: 메뉴얼 탭, 관리자 기능 |
 
 ## 실행
 

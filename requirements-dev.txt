@@ -1,0 +1,3 @@
+# 테스트 전용 (앱 실행·빌드에는 필요 없음)
+-r requirements.txt
+playwright>=1.40
